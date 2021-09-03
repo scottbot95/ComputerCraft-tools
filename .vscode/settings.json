@@ -1,0 +1,21 @@
+{
+    "Lua.diagnostics.globals": [
+        "turtle",
+        "fuelSlot",
+        "fuelSlots",
+        "rednet",
+        "peripheral",
+        "textutils",
+        "gps",
+        "vector",
+        "parallel",
+        "rs",
+        "fs",
+        "shell",
+        "term",
+        "sleep"
+    ],
+    "Lua.diagnostics.disable": [
+        "lowercase-global"
+    ]
+}
