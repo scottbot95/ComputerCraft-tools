@@ -13,7 +13,8 @@
         "fs",
         "shell",
         "term",
-        "sleep"
+        "sleep",
+        "http"
     ],
     "Lua.diagnostics.disable": [
         "lowercase-global"

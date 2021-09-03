@@ -6,7 +6,7 @@ local down = vector.new(0, -1, 0) -- rotate counter-clockwise in cross product
 local position
 local direction = nil
 
-function autoInitialize()
+local function autoInitialize()
     local startPosition = vector.new(gps.locate(2, true))
     for i = 1, 4 do
         if (turtle.forward()) then
@@ -19,7 +19,7 @@ function autoInitialize()
     error("Failed to determine forward direction")
 end
 
-function initialize(x, y, z, facing)
+local function initialize(x, y, z, facing)
     if (type(x) == "table") then
         position = x
         direction = y
@@ -52,3 +52,5 @@ function initialize(x, y, z, facing)
         position = position + down
     end)
 end
+
+return {autoInitialize = autoInitialize, initialize = initialize}
