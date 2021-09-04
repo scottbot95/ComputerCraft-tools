@@ -106,13 +106,18 @@ local function getFilesList(sRepo, sTree, sPath)
     return tFiles
 end
 
+local function postInstall(sPath)
+    fs.move(sPath .. '/install.lua', sPath .. '/programs/update_faultytools.lua')
+end
+
 local function main(sDldir, sRepo, sTree, sPath)
     writeCenter("Connecting to Github...")
     local files = getFilesList(sRepo, sTree, sPath)
     for _, f in ipairs(files) do
         downloadFile(f.name, sDldir .. '/' .. f.path, f.downloadUrl)
     end
-    writeCenter("Download completed")
+    postInstall(sPath)
+    writeCenter("Install completed")
     sleep(2.5)
     term.clear()
     term.setCursorPos(1,1)
