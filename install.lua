@@ -1,6 +1,4 @@
 --- Update/Install faultyTools. Bootstrapped by gist 923866e3158f1244f0348803eb0f00a6
-local expect = require("cc.expect")
-
 --#region GUI
 local title = "FaultyTools Installer"
 local width,height = term.getSize()
@@ -32,7 +30,6 @@ end
 
 local blockList = [[
 @.vscode
-@install.lua
 @README.md
 ]]
 local function isBlockList(sFile)
@@ -107,7 +104,20 @@ local function getFilesList(sRepo, sTree, sPath)
 end
 
 local function postInstall(sPath)
-    fs.move(sPath .. '/install.lua', sPath .. '/programs/update_faultytools.lua')
+    local installScript = sPath .. '/install.lua'
+    local destPath = sPath .. '/programs/update_faultytools.lua'
+    writeCenter('Installing...')
+    print('\nCopy from ' .. installScript .. ' to ' .. destPath)
+    if (fs.exists(destPath)) then
+        fs.delete(destPath)
+    end
+    fs.move(installScript, destPath)
+
+    local sCurrPath = shell.path()
+    local sProgramPath = sPath .. '/programs'
+    if not sCurrPath:find(sProgramPath) then
+        shell.setPath(shell.path() .. ':' .. sPath .. '/programs')
+    end
 end
 
 local function main(sDldir, sRepo, sTree, sPath)
@@ -116,7 +126,7 @@ local function main(sDldir, sRepo, sTree, sPath)
     for _, f in ipairs(files) do
         downloadFile(f.name, sDldir .. '/' .. f.path, f.downloadUrl)
     end
-    postInstall(sPath)
+    postInstall(sDldir)
     writeCenter("Install completed")
     sleep(2.5)
     term.clear()
@@ -125,7 +135,7 @@ end
 
 local function parseInput(sDldir, sRepo, sTree, sPath)
     sRepo = sRepo or "scottbot95/computercraft-tools"
-    sDldir = sDldir or ""
+    sDldir = sDldir or "/"
     sPath = sPath or ""
     sTree = sTree or "master"
     main(sDldir, sRepo, sTree, sPath)
