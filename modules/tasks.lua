@@ -1,10 +1,13 @@
 local expect = require('cc.expect').expect
 
 local tasks = {}
+local nextId = 1
 
 local Task = {
     status = 'suspended',
+    name = nil,
     routine = nil,
+    id = nil,
     _param = nil
 }
 
@@ -23,10 +26,15 @@ function Task:start()
     self.status = 'running'
 end
 
-local function newTask(fn)
+local function newTask(fn, name)
     expect(1, fn, 'function')
-    local task = Task:new { routine = coroutine.create(fn) }
-    table.insert(tasks, task)
+    local task = Task:new { 
+        routine = coroutine.create(fn),
+        name = name or tostring(nextId),
+        id = nextId
+    }
+    tasks[nextId] = task
+    nextId = nextId + 1
     return task
 end
 
@@ -41,7 +49,7 @@ end
 local function runTasks()
     local eventData = { n = 0 }
     while true do
-        for i, task in ipairs(tasks) do
+        for i, task in pairs(tasks) do
             if task.status == 'running' and (task._param == nil or task._param == eventData[1] or eventData[1] == 'terminate') then
                 local ok, param = coroutine.resume(task.routine, table.unpack(eventData, 1, eventData.n))
                 if not ok then
@@ -51,7 +59,7 @@ local function runTasks()
                 end
                 if coroutine.status(task.routine) == "dead" then
                     task.status = 'dead'
-                    table.remove(tasks, i)
+                    tasks[i] = nil
                     -- TODO end if there are no running tasks?
                 end
             end
@@ -60,4 +68,39 @@ local function runTasks()
     end
 end
 
-return { newTask = newTask, getTasks = getTasks, run = runTasks }
+local function pauseAll()
+    for _, task in pairs(tasks) do
+        task.status = 'suspended'
+    end
+end
+
+local function cancelTask(id)
+    if tasks[id] then
+        tasks[id].status = 'cancelled'
+        tasks[id] = nil
+    end
+end
+
+local function pauseTask(id)
+    if tasks[id] then
+        tasks[id].status = 'suspended'
+        return true
+    end
+end
+
+local function resumeTask(id)
+    if tasks[id] then
+        tasks[id].status = 'running'
+        return true
+    end
+end
+
+return {
+    newTask = newTask,
+    getTasks = getTasks,
+    run = runTasks,
+    pauseAll = pauseAll,
+    cancelTask = cancelTask,
+    pauseTask = pauseTask,
+    resumeTask = resumeTask,
+}
