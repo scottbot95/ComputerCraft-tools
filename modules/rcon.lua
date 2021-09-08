@@ -1,105 +1,104 @@
-local expect = require('cc.expect').expect
+local expect = require('cc.expect')
+local tasks = require('tasks')
+local logger = require('log').Logger:new('rcon')
 
-local tReceivedMessages = {}
-local tReceivedMessageTimeouts = {}
 local tSenderAllowList = nil
 
 local tCommands = {
-	shell = function (tMessage)
-		expect(1, tMessage, "table")
-		
-	end
+	shell = function (tPayload)
+		expect.expect(1, tPayload, "table")
+		return shell.run(table.unpack(tPayload))
+	end,
+    cancelTask = function (nTaskID)
+        tasks.cancelTask(nTaskID)
+    end,
+    pauseTask = function (nTaskID)
+        tasks.pauseTask(nTaskID)
+    end,
 }
 
-local sUnknownCommand = "UNKNOWN_COMMAND"
+tCommands.commands = function ()
+    local tCommandNames = {}
+    for k, _ in pairs(tCommands) do
+        table.insert(tCommandNames, k)
+    end
+    return tCommandNames
+end
 
-function host()
-	-- Find a modem
+local UNKNOWN_COMMAND = "UNKNOWN_COMMAND"
+
+local function open()
+    -- Find a modem
     local sModemSide = nil
     for _, sSide in ipairs(rs.getSides()) do
-        if peripheral.getType(sSide) == "modem" and peripheral.call(sSide, "isWireless") then
+        if peripheral.getType(sSide) == "modem" --[[and peripheral.call(sSide, "isWireless")]] then
             sModemSide = sSide
             break
         end
     end
 
-    if sModemSide == nil then
-        print("No wireless modems found. 1 required.")
-        return
+    if sModemSide ~= nil then
+        rednet.open(sModemSide)
+        return true
     end
 
-	rednet.open(sModemSide)
-
-	while true do
-		sender, message = rednet.receive("rcon")
-		if tSenderAllowList == nil or tSenderAllowList[sender] then
-			
-		end
-	end
 end
 
--- local function _host()
--- 	-- Find modem
---     local modem = peripheral.find("modem")
-	
--- 	if modem == nil then
--- 		print("No modems found. 1 required")
--- 		return
--- 	end
-	
--- 	-- Open a channel
--- 	print("Opening channel on modem")
--- 	modem.open(os.getComputerID())
-	
--- 	while true do
--- 		local sEvent, p1, p2, p3 = os.pullEvent("rcon_message")
--- 		if sEvent == "rcon_message" then
--- 			local sReplyChannel, sCommand, message = p1, p2, p3
--- 			local fCommand = tCommands[sCommand]
--- 			if fCommand then
--- 				local response = fCommand(message)
--- 				if response then
--- 					modem.transmit(sReplyChannel, os.getComputerID(), response)
--- 				end
--- 			else
--- 				print("Unknown command " .. sCommand .. " from " .. sReplyChannel)
--- 				modem.transmit(sReplyChannel, os.getComputerID(), sUnknownCommand)
--- 			end
--- 		end
--- 	end
--- end
+local function processCommand(message)
+    local commandName = expect.field(message, 'command', 'string')
+    local commandFunc = tCommands[commandName]
+    if commandFunc == nil or type(commandFunc) ~= 'function' then
+        logger:debug('Unknown command: ' ..commandName)
+        return UNKNOWN_COMMAND
+    end
 
--- local bRunning = false
--- --- Internal function to map modem_message events into rcon_message
--- local function run()
--- 	if bRunning then
--- 		error("rcon is already running", 2)
--- 	end
--- 	bRunning = true
--- 	while bRunning do
--- 		local sEvent, p1, p2, p3, p4 = os.pullEventRaw()
--- 		if sEvent == "modem_message" then
--- 			-- Got a modem message, process it into an rcon_message
---             local sModem, nChannel, nReplyChannel, tMessage = p1, p2, p3, p4
--- 			if nChannel == os.getComputerID() and type(tMessage) == "table" and tMessage.nMessageID then
--- 				if not tReceivedMessages[tMessage.nMessageID] then
--- 					tReceivedMessages[tMessage.nMessageID] = true
--- 					tReceivedMessageTimeouts[os.startTimer(30)] = tMessage.nMessageID
--- 					os.queueEvent("rcon_message", nReplyChannel, tMessage.command, tMessage.payload)
--- 				end
--- 			end
--- 		elseif sEvent == "timer" then
--- 			-- Got a timer event, use it to clear the recieve history
--- 			local nTimer = p1
--- 			local nMessageId = tReceivedMessageTimeouts[nTimer]
--- 			if nMessageId then
--- 				tReceivedMessageTimeouts[nTimer] = nil
--- 				tReceivedMessages[nMessageId] = nil
--- 			end
--- 		end
--- 	end
--- end
+    local payload = message.payload
+    logger:debug('Executing ' .. commandName .. ' ' .. (payload or ''))
+    return commandFunc(payload)
+end
 
--- function host()
--- 	parallel.waitForAll(run, _host)
--- end
+local function hostTask()
+    logger:debug('Hosting rcon for ' .. os.getComputerID())
+    while true do
+        sender, message = rednet.receive("rcon")
+        if tSenderAllowList == nil or tSenderAllowList[sender] then
+            local response = processCommand(message)
+            if response ~= nil then
+                logger:debug('Response: ' .. tostring(response))
+                rednet.send(sender, response, 'rcon')
+            end
+        end
+    end
+end
+
+local function host()
+	if not open() then
+        error("No wireless modems found. 1 required.")
+    end
+
+    local task = tasks.newTask(hostTask)
+    task:start()
+    return task
+end
+
+local function registerCommand(sName, fHandler)
+    expect.expect(1, sName, 'string')
+    expect.expect(2, fHandler, 'function')
+    if tCommands[sName] ~= nil then
+        error(sName .. 'already registered')
+    end
+
+    tCommands[sName] = fHandler
+end
+
+local function sendCommand(id, command, payload)
+    rednet.send(id, {
+        command = command,
+        payload = payload
+    }, 'rcon')
+
+    local _, response, _ = rednet.receive('rcon')
+    return response
+end
+
+return {host = host, registerCommand = registerCommand, sendCommand = sendCommand}
