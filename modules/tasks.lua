@@ -49,7 +49,7 @@ end
 local function runTasks()
     local eventData = { n = 0 }
     while true do
-        for i, task in pairs(tasks) do
+        for id, task in pairs(tasks) do
             if task.status == 'running' and (task._param == nil or task._param == eventData[1] or eventData[1] == 'terminate') then
                 local ok, param = coroutine.resume(task.routine, table.unpack(eventData, 1, eventData.n))
                 if not ok then
@@ -59,7 +59,7 @@ local function runTasks()
                 end
                 if coroutine.status(task.routine) == "dead" then
                     task.status = 'dead'
-                    tasks[i] = nil
+                    tasks[id] = nil
                     -- TODO end if there are no running tasks?
                 end
             end
