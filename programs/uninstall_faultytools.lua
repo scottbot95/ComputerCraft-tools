@@ -9,3 +9,5 @@ fs.delete("/startup")
 for _, sPath in ipairs(tFilesToDelete) do
     fs.delete(sInstallDir .. '/' .. sPath)
 end
+
+settings.unset('faultyTools.installDir')
