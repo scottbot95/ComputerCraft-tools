@@ -103,15 +103,19 @@ local function getFilesList(sRepo, sTree, sPath)
     return tFiles
 end
 
+local function overwiteMove(sFrom, sTo)
+    if fs.exists(sTo) then
+        fs.delete(sTo)
+    end
+    fs.move(sFrom, sTo)
+end
+
 local function postInstall(sPath)
     local installScript = sPath .. '/install.lua'
     local destPath = sPath .. '/programs/update_faultytools.lua'
     writeCenter('Installing...')
-    print('\nCopy from ' .. installScript .. ' to ' .. destPath)
-    if (fs.exists(destPath)) then
-        fs.delete(destPath)
-    end
-    fs.move(installScript, destPath)
+    overwiteMove(sPath .. '/install.lua', sPath .. '/programs/update_faultytools.lua')
+    overwiteMove(sPath .. '/startup.lua', '/startup')
 
     settings.set('faultyTools.installDir', sPath)
     settings.save('/.settings')
