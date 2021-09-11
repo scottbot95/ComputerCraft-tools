@@ -1,5 +1,4 @@
 local expect = require('cc.expect').expect
-local logger = require('log').Logger:new('tasks')
 
 local tasks = {}
 local nextId = 1
@@ -89,7 +88,6 @@ local function runTasks()
         for id, task in pairs(tasks) do
             if task.status == 'running' and (task._yieldValue == nil or task._yieldValue == eventData[1] or eventData[1] == 'terminate') then
                 runningTask = task
-                logger.debug("Resuming task " .. task.name)
                 local ok, result = coroutine.resume(task.routine, table.unpack(eventData, 1, eventData.n))
                 runningTask = nil -- probably not needed, but just be safe since technically no task is running at this point
                 if not ok then
