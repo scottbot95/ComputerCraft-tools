@@ -1,4 +1,5 @@
 local enum = require('utils').enum
+local tasks = require('tasks')
 
 local LogLevel = enum {
     "ERROR",
@@ -19,7 +20,8 @@ local function logMessage(prefix, msg)
         msg = msg()
     end
     msg = tostring(msg)
-    print(('[%s] %s'):format(prefix, msg))
+    local taskName = tasks.getRunningTask().name
+    print(('[%s] %s %s'):format(taskName, prefix, msg))
 end
 
 Logger = {}

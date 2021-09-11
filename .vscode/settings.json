@@ -15,7 +15,9 @@
         "term",
         "sleep",
         "http",
-        "write"
+        "write",
+        "settings",
+        "read"
     ],
     "Lua.diagnostics.disable": [
         "lowercase-global"

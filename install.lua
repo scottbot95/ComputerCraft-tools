@@ -1,4 +1,4 @@
---- Update/Install faultyTools. Bootstrapped by gist 923866e3158f1244f0348803eb0f00a6
+--- Update/Install faultyTools. Bootstrapped by `gist run 923866e3158f1244f0348803eb0f00a6`
 --#region GUI
 local title = "FaultyTools Installer"
 local width,height = term.getSize()
@@ -113,6 +113,9 @@ local function postInstall(sPath)
     end
     fs.move(installScript, destPath)
 
+    settings.set('faultyTools.installDir', sPath)
+    settings.save('/.settings')
+
     local sCurrPath = shell.path()
     local sProgramPath = sPath .. '/programs'
     if not sCurrPath:find(sProgramPath) then
@@ -133,9 +136,27 @@ local function main(sDldir, sRepo, sTree, sPath)
     term.setCursorPos(1,1)
 end
 
+local function userInput(sPrompt, sDefault)
+    writeCenter(sPrompt)
+    term.setCursorPos(1, height)
+    if sDefault then
+        term.write("[" .. sDefault .. "]:")
+    end
+    term.setCursorBlink(true)
+    local input = read()
+    term.setCursorBlink(false)
+    if not input or input == '' then
+        input = sDefault
+    end
+    return input
+end
+
 local function parseInput(sDldir, sRepo, sTree, sPath)
     sRepo = sRepo or "scottbot95/computercraft-tools"
-    sDldir = sDldir or "/"
+    sDldir = sDldir or settings.get('faultyTools.installDir')
+    if not sDldir then
+        sDldir = userInput("Please enter install directory", "/")
+    end
     sPath = sPath or ""
     sTree = sTree or "master"
     main(sDldir, sRepo, sTree, sPath)
